@@ -1,51 +1,85 @@
+use rgb_lib::{Wallet, Error, wallet::{WalletData, Online}};
+
+use crate::commands::Commands;
+use super::wallet::WOnline;
+use super::{WalletState, BtcWallet, WState, WInitiated, WalletWBlindUTXO};
+
 
 // Wallet that received the funds to start the RGB contract
+#[derive(Clone)]
 pub struct WalletOnline {
     name    : String,
-    wallet  : Wallet,
-    btc_add : String,  // 1:1 wallet - address!
-    state   : WalletStates,
+    wl_data : WalletData,
+    btc_add : Vec<String>,  // 1:1 wallet - address!
+    state   : WState,
     online  : Online,
 }
 
 impl WalletOnline {
-    pub fn new (w1 : &WalletInitiated, electrum_url: &str) -> Result<Self, Error> {
-        let online = w1.wallet.go_online(false, electrum_url.to_string())?;
+    pub fn new<W> (w1 : W, electrum_url: &str) -> Result<Self, Error> 
+    where W : WInitiated + BtcWallet
+    {
+        let mut wallet = Wallet::new(w1.wl_data())?;
+        let online = wallet.go_online(false, electrum_url.to_string())?;
         Ok(Self {
-            name : w1.name,
-            wallet: w1.wallet,
-            btc_add: w1.btc_add,
-            state: w1.state,
+            name : w1.name().to_string(),
+            wl_data: w1.wl_data().clone(),
+            btc_add: w1.get_btc_address().to_vec(),
+            state: WState::Online,
             online,
         })
     }
 }
 
-impl BtcWallet for WalletOnline {
-    fn get_btc_address(&self) -> &str {
-        &self.btc_add
-    }
-
-    fn get_new_btc_address(&mut self) -> &str {
-        self.btc_add = self.wallet.get_address();
-        &self.btc_add.as_str()
-    }
-}
-
-// TO DO - insert fund message for all the wallet states supporting it 
-//         - move all the states to a state subfolder
-
+// TO DO - insert fund message for all the wallet WState supporting it 
+//         - move all the WState to a state subfolder
 impl WalletState for WalletOnline {
     fn execute(&self, cmd : Commands) -> Box<dyn WalletState> {
        match cmd {
-        Commands::CreateUTXO => {
-
-        }
-        _ => Box::new(self),
+            Commands::NewBTCAddress => {
+                let wallet = Wallet::new(self.wl_data.clone()).unwrap();
+                let mut tmp : Vec<String> = self.btc_add.to_vec();
+                tmp.push(wallet.get_address());
+                Box::new(
+                    WalletOnline {
+                        btc_add : tmp.to_vec(),
+                        ..self.clone()
+                    }
+                )
+            }
+            Commands::CreateUTXO(fee ) => {
+                match WalletWBlindUTXO::new(self.clone(), fee) {
+                    Ok(w) => Box::new(w),
+                    _ => Box::new(self.clone()),
+                }
+            }
+            _ => Box::new(self.clone()),
        } 
     }
 
-    fn get_state(&self) -> &str {
-        self.state.to_string().as_str()
+    fn get_state(&self) -> String {
+        self.state.to_string()
+    }
+}
+
+impl WInitiated for WalletOnline {
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    fn wl_data(&self) -> WalletData {
+        self.wl_data.clone()
+    }
+}
+
+impl BtcWallet for WalletOnline {
+    fn get_btc_address(&self) -> &Vec<String> {
+        &self.btc_add
+    }
+}
+
+impl WOnline for WalletOnline {
+    fn wonline(&self) -> &Online {
+        &self.online
     }
 }

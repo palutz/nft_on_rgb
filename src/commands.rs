@@ -3,7 +3,8 @@ pub trait Command {}
 pub enum Commands<'a> {
     InitWallet, // to add data for init
     GoOnline(&'a str),
-    CreateUTXO, // with online wallet address
+    NewBTCAddress,
+    CreateUTXO(f32), // with online wallet address
     CheckUnspents,
     InitBlindUTXO,
     IssueCFA,

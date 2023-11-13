@@ -28,20 +28,20 @@ pub trait BtcWallet {
 }
 
 // Min set of functionalities for an Initiated Wallet
-pub trait WInitiated  {
-    fn name(&self) -> &str;    
-    fn wl_data(&self) -> WalletData;
+pub trait WInitiated<'a>  {
+    fn name(&self) -> &'a str;    
+    fn wl_data(&self) -> &'a WalletData;
 }
 
-pub trait WOnline {
-    fn wonline(&self) -> &Online;
+pub trait WOnline<'a> {
+    fn wonline(&self) -> &'a Online;
 }
 
-pub trait WalletWUTXO {
-    fn get_utxo() -> u8;
+pub trait WalletUTXO {
+    fn get_utxo(&self) -> u8;
 }
 
 pub trait WalletBlindUTXO {
-    fn blind_receive();
-    fn witness_receive();
+    fn blind_receive(&self);
+    fn witness_receive(&self);
 }

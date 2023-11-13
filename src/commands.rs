@@ -6,7 +6,7 @@ pub enum Commands<'a> {
     NewBTCAddress,
     CreateUTXO(f32), // with online wallet address
     CheckUnspents,
-    InitBlindUTXO,
+    InitBlindUTXO(&'a str),
     IssueCFA,
 }
 

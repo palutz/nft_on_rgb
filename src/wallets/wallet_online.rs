@@ -2,7 +2,7 @@ use rgb_lib::{Wallet, Error, wallet::{WalletData, Online}};
 
 use crate::commands::Commands;
 use super::wallet::WOnline;
-use super::{WalletState, BtcWallet, WState, WInitiated, WalletWBlindUTXO};
+use super::{WalletState, BtcWallet, WState, WInitiated, WalletWUTXO};
 
 
 // Wallet that received the funds to start the RGB contract
@@ -16,10 +16,11 @@ pub struct WalletOnline {
 }
 
 impl WalletOnline {
-    pub fn new<W> (w1 : W, electrum_url: &str) -> Result<Self, Error> 
-    where W : WInitiated + BtcWallet
+    pub fn new<'a, W> (w1 : W, electrum_url: &str) -> Result<Self, Error> 
+    where W : WInitiated<'a> + BtcWallet
     {
-        let mut wallet = Wallet::new(w1.wl_data())?;
+        let wdata = w1.wl_data().clone(); 
+        let mut wallet = Wallet::new(*w1.wl_data())?;
         let online = wallet.go_online(false, electrum_url.to_string())?;
         Ok(Self {
             name : w1.name().to_string(),
@@ -48,7 +49,7 @@ impl WalletState for WalletOnline {
                 )
             }
             Commands::CreateUTXO(fee ) => {
-                match WalletWBlindUTXO::new(self.clone(), fee) {
+                match WalletWUTXO::new(self.clone(), fee) {
                     Ok(w) => Box::new(w),
                     _ => Box::new(self.clone()),
                 }
@@ -66,15 +67,14 @@ impl WInitiated for WalletOnline {
     fn name(&self) -> &str {
         self.name.as_str()
     }
-
-    fn wl_data(&self) -> WalletData {
-        self.wl_data.clone()
+    fn wl_data(&self) -> &WalletData {
+        &self.wl_data
     }
 }
 
 impl BtcWallet for WalletOnline {
     fn get_btc_address(&self) -> &Vec<String> {
-        &self.btc_add
+        self.btc_add.as_ref()
     }
 }
 

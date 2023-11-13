@@ -1,6 +1,7 @@
-use std::borrow::BorrowMut;
-use rgb_lib::{{Wallet, Error}, wallet::{WalletData, Online}};
-use super::{WState, WInitiated, BtcWallet, WOnline, WalletState };
+use super::{BlindDataRGB, WState, WInitiated, BtcWallet, WOnline, WalletBlindUTXO};
+use rgb_lib::{Wallet, Error};
+use rgb_lib::wallet::{WalletData, Online};
+
 
 #[derive(Clone)]
 pub struct WalletWBlindUTXO {
@@ -10,38 +11,41 @@ pub struct WalletWBlindUTXO {
     state   : WState,
     online  : Online,
     utxo    : u8,
+    bl_data : BlindDataRGB,
 }
 
 impl WalletWBlindUTXO {
-    pub fn new<W> (w1 : W, fee_rate: f32) -> Result<Self, Error> 
-    where W : WInitiated + BtcWallet + WOnline
-    {
-        // we need the wallet to be mut to create the utxo
-        let wdata = w1.wl_data(); 
-        let mut wtmp : Wallet = Wallet::new(wdata.clone())?;
-        let utxo: u8 = wtmp.borrow_mut().create_utxos(
-            w1.wonline().clone(), 
-            false, 
-            None, 
-            None, 
-            fee_rate)?;
-        Ok(Self { 
-            name: w1.name().to_string(), 
-            wl_data: wdata,
-            btc_add: w1.get_btc_address().to_vec(), 
-            state: WState::UTXOPrepared, 
-            online: w1.wonline().clone(),
-            utxo: utxo,
-        })
+    pub fn new(name: String, btc_add: Vec<String>, bl_data: BlindDataRGB) -> Self {
+        let wallet = Wallet::new(wdata.clone())?;
+        wallet.blind(asset_id, amount, duration_seconds, consignment_endpoints)
+}
+
+impl WInitiated for WalletWBlindUTXO {
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+    fn wl_data(&self) -> &WalletData {
+        &self.wl_data
     }
 }
 
-impl WalletState for WalletWBlindUTXO {
-    fn execute(&self, cmd : crate::commands::Commands) -> Box<dyn WalletState> {
-        todo!()
+impl BtcWallet for WalletWBlindUTXO {
+    fn get_btc_address(&self) -> &Vec<String> {
+        self.btc_add.as_ref()
     }
+}
 
-    fn get_state(&self) -> String {
-        self.state.to_string()
+impl WOnline for WalletWBlindUTXO {
+    fn wonline(&self) -> &Online {
+        &self.online
+    }
+}
+
+impl WalletBlindUTXO for WalletWBlindUTXO {
+    fn blind_receive(&self) {
+        self.wa
+    }
+    fn witness_receive(&self) {
+        todo!()
     }
 }

@@ -33,10 +33,10 @@ impl WalletState for WalletInitiated {
                 let mut tmp : Vec<String> = self.btc_add.to_vec();
                 tmp.push(wallet.get_address());
                 Box::new(
-                    WalletInitiated {
+                    Self {
                         btc_add : tmp.to_vec(),
                         ..self.clone()
-                }
+                    }
                 )
             }
             Commands::GoOnline(url) => {
@@ -54,13 +54,13 @@ impl WalletState for WalletInitiated {
     }
 }
 
-impl WInitiated for WalletInitiated {
-    fn name(&self) -> &str {
+impl<'a> WInitiated<'a> for WalletInitiated {
+    fn name(&self) -> &'a str {
         self.name.as_str()
     }
 
-    fn wl_data(&self) -> WalletData {
-        self.wl_data.clone()
+    fn wl_data(&self) -> &'a WalletData {
+        &self.wl_data
     }
 }
 

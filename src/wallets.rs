@@ -10,6 +10,12 @@ pub use wallet_initiated::WalletInitiated;
 mod wallet_online;
 pub use wallet_online::WalletOnline;
 
+mod wallet_utxo;
+pub use wallet_utxo::WalletWUTXO;
+
+mod blind_data_rgb;
+pub use blind_data_rgb::BlindDataRGB;
+
 mod wallet_blind_utxo;
 pub use wallet_blind_utxo::WalletWBlindUTXO;
 

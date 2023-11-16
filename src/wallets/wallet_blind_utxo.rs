@@ -1,4 +1,6 @@
-use super::{BlindDataRGB, WState, WInitiated, BtcWallet, WOnline, WalletBlindUTXO};
+use super::{BlindDataRGB, WState,  WalletBlindUTXO, WalletState, };
+use std::rc::Rc;
+use crate::commands::Commands;
 use rgb_lib::{Wallet, Error};
 use rgb_lib::wallet::{WalletData, Online};
 
@@ -15,35 +17,41 @@ pub struct WalletWBlindUTXO {
 }
 
 impl WalletWBlindUTXO {
-    pub fn new(name: String, btc_add: Vec<String>, bl_data: BlindDataRGB) -> Self {
-        let wallet = Wallet::new(wdata.clone())?;
-        wallet.blind(asset_id, amount, duration_seconds, consignment_endpoints)
-}
+    pub fn new (name: &str, btc_add: Rc<[&str]>, wl: WalletData, online: &Online, bl_data: BlindDataRGB) -> Result<Self, Error>  {
+        let wallet = Wallet::new(wl)?;
+        // wallet.blind(asset_id, amount, duration_seconds, consignment_endpoints)
 
-impl WInitiated for WalletWBlindUTXO {
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-    fn wl_data(&self) -> &WalletData {
-        &self.wl_data
+        todo!();
     }
 }
 
-impl BtcWallet for WalletWBlindUTXO {
-    fn get_btc_address(&self) -> &Vec<String> {
-        self.btc_add.as_ref()
+// TODO - Implement REFRESH wallet and when received? 
+impl WalletState for WalletWBlindUTXO {
+    fn execute(&self, cmd : crate::commands::Commands) -> Box<dyn WalletState> {
+        match cmd {
+            Commands::NewBTCAddress => {
+                let wallet = Wallet::new(self.wl_data.clone()).unwrap();
+                let mut tmp : Vec<String> = self.btc_add.to_vec();
+                tmp.push(wallet.get_address());
+                Box::new(
+                    WalletWBlindUTXO {
+                        btc_add : tmp.to_vec(),
+                        ..self.clone()
+                    }
+                )
+            }
+            _ => Box::new(self.clone())
+        }
     }
-}
 
-impl WOnline for WalletWBlindUTXO {
-    fn wonline(&self) -> &Online {
-        &self.online
+    fn get_state(&self) -> String {
+        self.state.to_string()
     }
 }
 
 impl WalletBlindUTXO for WalletWBlindUTXO {
     fn blind_receive(&self) {
-        self.wa
+        todo!();
     }
     fn witness_receive(&self) {
         todo!()

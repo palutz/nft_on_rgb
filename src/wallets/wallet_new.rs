@@ -1,5 +1,5 @@
 use rgb_lib::wallet::{DatabaseType, WalletData};
-use rgb_lib::{generate_keys, BitcoinNetwork};
+use rgb_lib::{generate_keys, BitcoinNetwork, Error};
 use crate::commands::*;
 use super::{WState, WalletState, WalletInitiated};
 
@@ -11,7 +11,7 @@ pub struct WalletNew {
 }
 
 impl WalletNew {
-    pub fn new(name : String, network: BitcoinNetwork) -> Result<Self, rgb_lib::Error> {
+    pub fn new(name : String, network: BitcoinNetwork) -> Result<Self, Error> {
         let data_dir = tempfile::tempdir()?;
         let keys = generate_keys(network);
         let wl_data = WalletData {
@@ -33,7 +33,7 @@ impl WalletState for WalletNew {
     fn execute(&self, cmd : Commands) -> Box<dyn WalletState> {
         match cmd {
             Commands::InitWallet => {
-                match WalletInitiated::new(&self.name, self.wl_data.clone()) {
+                match WalletInitiated::new(&self.name, &self.wl_data) {
                     Ok(w) => Box::new(w),
                     Err(e) => {
                         println!("Error: {}", e);

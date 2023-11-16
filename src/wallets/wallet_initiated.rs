@@ -1,24 +1,23 @@
 use rgb_lib::{Wallet, Error, wallet::WalletData};
 use crate::commands::Commands;
-use super::{WalletOnline, BtcWallet, WState, WalletState, WInitiated};
+use super::{WState, WalletState, WalletOnline};
 
 
 // In this state, the newly created Wallet will get a BTC Address for the funding
-#[derive(Clone)]
 pub struct WalletInitiated {
     name    : String,
-    wl_data : WalletData,
+    wallet  : Wallet,
     state   : WState,
-    btc_add : Vec<String>,  // 1:1 wallet - address!
+    btc_add : Vec<String>,
 }
 
 
 impl WalletInitiated {
-    pub fn new(name : &str, wdata : WalletData) -> Result<Self, Error> {
+    pub fn new(name : &str, wdata : &WalletData) -> Result<Self, Error> {
         let wallet = Wallet::new(wdata.clone())?;
         Ok(Self {
             name : String::from(name),
-            wl_data : wdata,
+            wallet,
             state : WState::New,
             btc_add: vec![wallet.get_address()],
         })
@@ -29,45 +28,29 @@ impl WalletState for WalletInitiated {
     fn execute(&self, cmd : Commands) -> Box<dyn WalletState> {
         match cmd {
             Commands::NewBTCAddress => {
-                let wallet = Wallet::new(self.wl_data.clone()).unwrap();
-                let mut tmp : Vec<String> = self.btc_add.to_vec();
-                tmp.push(wallet.get_address());
+                let mut tmp : Vec<String> = vec!();
+                tmp.push(self.wallet.get_address());
                 Box::new(
                     Self {
-                        btc_add : tmp.to_vec(),
-                        ..self.clone()
+                        btc_add : vec![self.btc_add, tmp].concat(),
+                        ..*self
                     }
                 )
             }
             Commands::GoOnline(url) => {
-                match WalletOnline::new(self.clone(), url) {
+                let mut w = self.wallet;
+                match WalletOnline::new(
+                    &self.name, self.btc_add, &mut w, url)
+                {
                     Ok(w) => Box::new(w),
-                    _ => Box::new(self.clone()),  // some errors... state not changed
+                    _ => Box::new(*self)
                 }
             }
-            _ => Box::new(self.clone())
+            _ => Box::new(*self)
         }
     }
 
     fn get_state(&self) -> String {
         self.state.to_string()
-    }
-}
-
-impl<'a> WInitiated<'a> for WalletInitiated {
-    fn name(&self) -> &'a str {
-        self.name.as_str()
-    }
-
-    fn wl_data(&self) -> &'a WalletData {
-        &self.wl_data
-    }
-}
-
-// Checking the BTC address.
-// WE always have at least 1 BTC address since we create one when the wallet get in this state
-impl BtcWallet for WalletInitiated {
-    fn get_btc_address(&self) -> &Vec<String> {
-        &self.btc_add
     }
 }

@@ -1,31 +1,26 @@
-use rgb_lib::{Wallet, Error, wallet::{WalletData, Online}};
-
+use std::{rc::Rc, borrow::BorrowMut};
+use rgb_lib::{Wallet, Error, wallet::Online};
 use crate::commands::Commands;
-use super::wallet::WOnline;
-use super::{WalletState, BtcWallet, WState, WInitiated, WalletWUTXO};
+use super::{WalletState, WState, WalletWUTXO};
 
 
 // Wallet that received the funds to start the RGB contract
-#[derive(Clone)]
 pub struct WalletOnline {
     name    : String,
-    wl_data : WalletData,
-    btc_add : Vec<String>,  // 1:1 wallet - address!
+    wallet  : Wallet,
+    btc_add : Vec<String>,
     state   : WState,
     online  : Online,
 }
 
 impl WalletOnline {
-    pub fn new<'a, W> (w1 : W, electrum_url: &str) -> Result<Self, Error> 
-    where W : WInitiated<'a> + BtcWallet
+    pub fn new (name: &str, btc_add: Vec<String>, wallet: &mut Wallet, electrum_url: &str) -> Result<Self, Error> 
     {
-        let wdata = w1.wl_data().clone(); 
-        let mut wallet = Wallet::new(*w1.wl_data())?;
         let online = wallet.go_online(false, electrum_url.to_string())?;
         Ok(Self {
-            name : w1.name().to_string(),
-            wl_data: w1.wl_data().clone(),
-            btc_add: w1.get_btc_address().to_vec(),
+            name : name.to_string(),
+            wallet: *wallet,
+            btc_add,
             state: WState::Online,
             online,
         })
@@ -38,48 +33,28 @@ impl WalletState for WalletOnline {
     fn execute(&self, cmd : Commands) -> Box<dyn WalletState> {
        match cmd {
             Commands::NewBTCAddress => {
-                let wallet = Wallet::new(self.wl_data.clone()).unwrap();
-                let mut tmp : Vec<String> = self.btc_add.to_vec();
-                tmp.push(wallet.get_address());
+                let mut tmp : Vec<String> = vec!();
+                tmp.push(self.wallet.get_address());
                 Box::new(
-                    WalletOnline {
-                        btc_add : tmp.to_vec(),
-                        ..self.clone()
+                    Self {
+                        btc_add : vec![self.btc_add, tmp].concat(),
+                        ..*self
                     }
                 )
-            }
+            },
             Commands::CreateUTXO(fee ) => {
-                match WalletWUTXO::new(self.clone(), fee) {
+                match WalletWUTXO::new(
+                    &self.name, self.btc_add, self.wallet.borrow_mut(), self.online, fee)
+                {
                     Ok(w) => Box::new(w),
-                    _ => Box::new(self.clone()),
+                    _ => Box::new(*self),
                 }
-            }
-            _ => Box::new(self.clone()),
+            },
+            _ => Box::new(*self),
        } 
     }
 
     fn get_state(&self) -> String {
         self.state.to_string()
-    }
-}
-
-impl WInitiated for WalletOnline {
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-    fn wl_data(&self) -> &WalletData {
-        &self.wl_data
-    }
-}
-
-impl BtcWallet for WalletOnline {
-    fn get_btc_address(&self) -> &Vec<String> {
-        self.btc_add.as_ref()
-    }
-}
-
-impl WOnline for WalletOnline {
-    fn wonline(&self) -> &Online {
-        &self.online
     }
 }
